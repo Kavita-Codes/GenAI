@@ -6,7 +6,7 @@ export async function registerController(req, res) {
   try {
       const { name, username, email, password } = req.body;
 
-  if (!name || !username || !email || !password) {
+  if (!username || !email || !password) {
     return res.status(401).json({
       message: "all field are required",
       success: false,
@@ -39,7 +39,11 @@ export async function registerController(req, res) {
   return res.status(201).json({
     message: "account registered successfully",
     success:true,
-    user,
+    user:{
+      id:user._id,
+      username:user.username,
+      email:user.email
+    }
   });
 }
    catch (error) {
@@ -85,6 +89,11 @@ export async function loginController(req, res) {
   return res.status(201).json({
     message: "user loggedIn successfully",
     success:true,
+    user:{
+      id:user._id,
+      username:user.username,
+      email:user.email
+    }
   });
  } catch (error) {
     return res.status(500).json({
