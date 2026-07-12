@@ -6,7 +6,7 @@ import Protected from "./auth/components/Protected"
 
 const router = createBrowserRouter([
   {
-    path: "/",    element: <Protected><Home /></Protected>           //home page is protected and can only be accessed by authenticated users
+    path: "/",    element: <Protected><Home/></Protected>           //home page is protected and can only be accessed by authenticated users
 },
 {
     path: "/login",    element: <Login />

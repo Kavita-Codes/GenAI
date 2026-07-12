@@ -24,6 +24,7 @@
     "multer": "^2.2.0",
     "parse": "^8.6.0",
     "pdf": "^0.1.0",
+    "pdf-parse": "^2.4.5",
     "zod": "^4.4.3",
     "zod-to-json-schema": "^3.25.2"
   }
