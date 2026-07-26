@@ -1,4 +1,4 @@
-import {AuthContext} from "../authContext.jsx"
+import {AuthContext} from "../auth.context.jsx"
 import {login , register , logout, getUser} from "../services/auth.api.js"
 import { useContext, useEffect } from "react"
 
@@ -11,27 +11,29 @@ export const useAuth = ()=>{
        setLoading(true)
        try {
            const data = await login({email , password})
-           console.log(data)
-           if (data && data.user) {
+           if (data && data.success && data.user) {
                setUser(data.user)
            }
+           return data  // Return so Login.jsx can check success/error
        } catch (error) {
            console.log("Login failed:", error)
+           return { success: false, message: "Login failed. Please try again." }
        } finally {
            setLoading(false)
        }
    }
 
-   const handleRegister = async({email ,username,password})=>{
+   const handleRegister = async({name, email, username, password})=>{
     setLoading(true)
     try {
-        const data = await register({email ,username, password})
-        console.log(data)
-        if (data && data.user) {
+        const data = await register({name, email, username, password})
+        if (data && data.success && data.user) {
             setUser(data.user)
         }
+        return data  // Return so Register.jsx can check success/error
     } catch (error) {
         console.log("Register failed:", error)
+        return { success: false, message: "Registration failed. Please try again." }
     } finally {
         setLoading(false)
     }
@@ -39,20 +41,30 @@ export const useAuth = ()=>{
 
     const handleLogout = async()=>{
         setLoading(true)
+        try {
             const data = await logout()
-            console.log(data)
             setUser(null)
+            return data
+        } catch (error) {
+            console.log("Logout failed:", error)
+        } finally {
             setLoading(false)
-    
+        }
     }
 
     const handleGetUser = async()=>{
         setLoading(true)
+        try {
             const data = await getUser()
-            console.log(data)
-
+            if (data && data.user) {
+                setUser(data.user)
+            }
+            return data
+        } catch (error) {
+            console.log("Get user failed:", error)
+        } finally {
             setLoading(false)
-    
+        }
     }
 
     useEffect(()=>{

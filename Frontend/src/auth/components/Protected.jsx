@@ -1,32 +1,35 @@
-import {useAuth} from '../hooks/useAuth';
-import {useNavigate} from 'react-router-dom';
+import { useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
-const Protected = ({children}) => {
-  const {loading, user} = useAuth();
+const Protected = ({ children }) => {
+  const { loading, user } = useAuth();
   const navigate = useNavigate();
 
-  if(loading) {
+  useEffect(() => {
+    // Only redirect after loading is done and user is still null
+    if (!loading && !user) {
+      navigate('/login');
+    }
+  }, [loading, user, navigate]);
+
+  if (loading) {
     return (
-      <main className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-
-            <div className="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-32 w-32 mb-4"></div>
-
-            <h2 className="text-xl font-semibold text-gray-700">Loading...</h2>
+      <div className="loading-page">
+        <div className="loading-spinner">
+          <div className="spinner-ring"></div>
+          <span className="spinner-text">Loading your workspace...</span>
         </div>
-      </main>
+      </div>
     );
   }
 
-
-  if (!user) {
-    navigate('/login');
-  }
+  // Don't render children while redirecting
+  if (!user) return null;
 
   return children;
+};
 
-}
-
-export default Protected
+export default Protected;
 
 // wrap by this component to protect any page from unauthenticated users. If user is not authenticated, it will redirect to login page.
