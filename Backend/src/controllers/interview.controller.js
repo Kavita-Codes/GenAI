@@ -96,3 +96,40 @@ export async function getAllInterviewReportsController(req, res) {
     });
   }
 }
+
+
+export async function generateResumePdfController(req, res) {
+    try {
+        const { interviewReportId } = req.params;
+
+        const interviewReport = await interviewReportModel.findById(interviewReportId);
+
+        if (!interviewReport) {
+            return res.status(404).json({
+                message: "Interview report not found."
+            });
+        }
+
+        const { resume, jobDescription, selfDescription } = interviewReport;
+
+        // Call the service function we created earlier to generate the PDF buffer
+        const pdfBuffer = await generateResumePdf({ 
+            resume, 
+            jobDescription, 
+            selfDescription 
+        });
+
+        // Set response headers for PDF download/viewing
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename=interview-report.pdf');
+        
+        return res.status(200).send(pdfBuffer);
+
+    } catch (error) {
+        console.error("Generate Resume PDF Controller Error:", error);
+        return res.status(500).json({
+            message: "Failed to generate resume PDF",
+            error: error.message
+        });
+    }
+}

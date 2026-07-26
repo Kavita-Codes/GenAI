@@ -225,4 +225,86 @@ CRITICAL RULES:
   return result;
 }
 
-export default generateInterviewReport;
+// 1. Puppeteer Function (jaise screenshot mein hai)
+async function generatePdfFromHtml(htmlContent) {
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    
+    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+    
+    const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
+    
+    await browser.close();
+    
+    return pdfBuffer;
+}
+
+// 2. Gemini HTML Generation Function
+async function generateResumePdf({ resume, selfDescription, jobDescription }) {
+    const resumePdfSchema = z.object({
+        html: z.string()
+    });
+
+  const prompt = `
+You are an expert Technical Recruiter, Principal Software Engineer, and Professional PDF Designer with over 20 years of experience.
+
+Analyze the candidate profile and job description provided below, and generate a clean, professional, and beautifully structured HTML string for an A4 Interview Report.
+
+------------------------------------------------------------
+CANDIDATE PROFILE
+------------------------------------------------------------
+RESUME:
+${resume}
+
+SELF DESCRIPTION:
+${selfDescription || "Not provided"}
+
+JOB DESCRIPTION:
+${jobDescription}
+
+------------------------------------------------------------
+STRICT OUTPUT REQUIREMENTS (MUST BE VALID JSON)
+------------------------------------------------------------
+You must return ONLY a valid JSON object matching the following Zod schema structure, containing a single field "html". Do NOT wrap it in markdown blockquotes (like \`\`\`json). Do NOT add any conversational text.
+
+{
+  "html": "<!DOCTYPE html><html><head><style>/* CSS Styles here */</style></head><body>...</body></html>"
+}
+
+------------------------------------------------------------
+DESIGN & FORMATTING RULES FOR THE HTML STRING:
+------------------------------------------------------------
+1. **A4 Fit & Layout:** The HTML must be specifically styled to fit cleanly onto a **Single A4 Page** (approx width: 210mm, min-height: 297mm) without messy page overflows. Use compact yet readable spacing, clean typography (e.g., system fonts like Inter, Roboto, or Arial), and structured grid/flex elements.
+2. **Padding & Margins:** Include proper container padding (e.g., 20mm or 24px-32px margins/padding inside the body) so content never touches the edges of the PDF.
+3. **Professional Theme:** Use a sleek modern corporate or tech UI theme (clean whites, dark grey text, subtle primary accent colors like deep indigo or slate blue, soft card backgrounds, and colored badges for match score or skill gap severities).
+4. **Report Content Structure to Include:**
+   - **Header:** Role title, target position name, and Match Score badge.
+   - **Summary Section:** Brief evaluation of the candidate against the job description.
+   - **Key Skill Gaps:** Clear, simple English bullet points showing missing areas.
+   - **Top Interview Questions & Approaches:** 3-4 high-value targeted technical/behavioral insights with concise answers.
+   - **Quick Action Plan / Roadmap:** Compact timeline or next steps.
+5. **Human-like & Simple Language:** All explanations, gaps, and answers must be written in simple, clear, human-like language so it's easy to read at a glance.
+`;
+
+const interaction = await ai.interactions.create({
+    model: "gemini-3.5-flash",
+    input: prompt,
+    response_format: {
+      type: "text",
+      mime_type: "application/json",
+      responseSchema: resumePdfSchema,
+    },
+  });
+
+  const rawText = interaction.output_text;
+  
+  // JSON parse karein
+  const parsedData = JSON.parse(rawText);
+  
+  // Call Puppeteer function to convert HTML to PDF buffer
+  const pdfBuffer = await generatePdfFromHtml(parsedData.html);
+  
+  return pdfBuffer;
+}
+
+export default {generateInterviewReport, generateResumePdf , generatePdfFromHtml}
