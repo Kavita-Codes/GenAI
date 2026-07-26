@@ -1,123 +1,228 @@
 import { GoogleGenAI } from "@google/genai";
-import {z} from "zod"
-import {zodToJsonSchema} from "zod-to-json-schema"
+import * as z from "zod";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
 
-
-/**
- * Zod schema defining the strict structure for the AI-generated interview report.
- * This guarantees type safety and matches the required output shape for the database/frontend.
- */
+// ---------------- Zod Schema Definition ----------------
 
 const interviewReportSchema = z.object({
-  matchScore: z
-    .number()
-    .min(0)
-    .max(100)
-    .describe("A quantitative score between 0 and 100 indicating how well the candidate's profile aligns with the job description."),
-  
+  matchScore: z.number().min(0).max(100),
+  title: z.string().optional().default("Role Interview Assessment"),
+
   technicalQuestions: z.array(
     z.object({
-      question: z.string().describe("A targeted technical or system design question relevant to the tech stack in the job description."),
-      intention: z.string().describe("The core competency or underlying concept the interviewer is testing."),
-      answer: z.string().describe("A comprehensive blueprint on how to structure the answer, covering key technical terms, trade-offs, and edge cases.")
+      question: z.string(),
+      intention: z.string(),
+      answer: z.string(),
     })
-  ).describe("Crucial technical questions with detailed evaluation strategy."),
+  ),
 
   behavioralQuestions: z.array(
     z.object({
-      question: z.string().describe("A situational or behavioral question testing culture fit, leadership, or conflict resolution."),
-      intention: z.string().describe("The specific soft skill or core value being evaluated."),
-      answer: z.string().describe("A step-by-step guide on how to answer this using the STAR methodology (Situation, Task, Action, Result).")
+      question: z.string(),
+      intention: z.string(),
+      answer: z.string(),
     })
-  ).describe("Behavioral questions with STAR-method breakdown."),
+  ),
 
   skillGaps: z.array(
     z.object({
-      skill: z.string().describe("The specific technical or domain skill the candidate is missing or weak in."),
-      severity: z.enum(["low", "medium", "high"]).describe("The criticality of this gap for the target role.")
+      skill: z.string(),
+      severity: z.enum(["low", "medium", "high"]),
     })
-  ).describe("Identified skill gaps requiring immediate upskilling."),
+  ),
 
   preparationPlan: z.array(
     z.object({
-      day: z.number().describe("The sequential day number in the study plan, starting from 1."),
-      focus: z.string().describe("The core technical or practical theme for the day."),
-      tasks: z.array(z.string()).describe("Actionable, hands-on tasks or concepts to master on this specific day.")
+      day: z.number(),
+      focusArea: z.string(),
+      tasks: z.array(z.string()),
     })
-  ).describe("A structured, day-wise preparation roadmap.")
+  ),
 });
 
-async function generateInterviewReport(resume, selfDescription, jobDescription) {
-    if (!resume || !jobDescription) {
-    throw new Error("Resume and Job Description are mandatory for generating an interview report.");
+// ---------------- Service Function ----------------
+
+async function generateInterviewReport({
+  resume,
+  selfDescription,
+  jobDescription,
+}) {
+  if (!resume || !jobDescription) {
+    throw new Error("Resume and Job Description are required.");
   }
 
+//   const prompt = `
+// You are a Principal Software Engineer and Hiring Committee Member with over 20 years of experience interviewing Software Engineers at top tech companies.
 
-  // High-impact system instruction for the LLM
- const systemInstruction = `
-You are a Principal Engineering Interviewer. 
-Your output must adhere to these professional standards:
+// Analyze the candidate profile and job description provided below, and generate a rigorous interview report.
 
-1. TECHNICAL DEPTH: Do not ask basic syntax questions. Ask about 'Trade-offs'. 
-   (e.g., instead of 'What is Redux?', ask 'When should you choose React Context vs Redux for state management, and what are the performance implications?')
-2. BEHAVIORAL PRECISION: Every behavioral answer must follow the STAR format (Situation, Task, Action, Result). 
-   Focus on 'Result'—use metrics or specific business impact (e.g., 'Reduced latency by 20%').
-3. GAP ANALYSIS: Be specific. If a gap is 'System Design', suggest learning 'Load Balancing' or 'Database Sharding'.
-4. ACTIONABLE PATH: The preparation plan should be a 14-day roadmap where Day 1-3 is 'Fundamentals', Day 4-9 is 'Core Tech/Projects', and Day 10-14 is 'Mock Interviews/System Design'.
-`;
+// ------------------------------------------------------------
+// CANDIDATE PROFILE
+// ------------------------------------------------------------
 
-  const prompt = `
-    Analyze the following profile for the job role:
-    RESUME: ${resume}
-    CANDIDATE DESCRIPTION: ${selfDescription}
-    JOB DESCRIPTION: ${jobDescription}
-    
-    Provide a detailed interview report based on the provided schema.
-  `;
+// RESUME:
+// ${resume}
 
-//   const response = await ai.models.generateContent({
-//     model: "gemini-2.5-flash", // Using latest stable model
-//     contents: prompt,
-//     config: {
-//       systemInstruction: systemInstruction,
-//       responseMimeType: "application/json",
-//       responseSchema: zodToJsonSchema(interviewReportSchema),
-//     },
-//   });
+// SELF DESCRIPTION:
+// ${selfDescription || "Not provided"}
 
-//   return JSON.parse(response.text());
+// JOB DESCRIPTION:
+// ${jobDescription}
 
- try {
-    // Calling Gemini using the recommended structured output configuration
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash", // Using latest stable production model
-      contents: prompt,
-      config: {
-        systemInstruction: systemInstruction,
-        responseMimeType: "application/json",
-        // Convert Zod schema to standard JSON schema for Gemini config
-        responseSchema: zodToJsonSchema(interviewReportSchema),
-      //   temperature: 0.3, // Lower temperature for more factual and analytical results
-      },
-    });
+// ------------------------------------------------------------
+// STRICT OUTPUT REQUIREMENTS (MUST BE VALID JSON)
+// ------------------------------------------------------------
+// You must return ONLY a valid JSON object. Do NOT wrap it in markdown blockquotes (like \`\`\`json). Do NOT add any conversational text or explanations.
 
-    const rawOutput = response.text;
-    if (!rawOutput) {
-      throw new Error("No response received from the Gemini model.");
+// The JSON structure must strictly follow this exact format:
+
+// {
+//   "matchScore": 85,
+//   "title": "MERN Stack Developer",
+//   "technicalQuestions": [
+//     {
+//       "question": "Scenario-based technical question text here...",
+//       "intention": "What this question evaluates...",
+//       "answer": "Detailed breakdown covering engineering concepts, trade-offs, best practices, and production approach..."
+//     }
+//   ],
+//   "behavioralQuestions": [
+//     {
+//       "question": "Behavioral question text here...",
+//       "intention": "Leadership/Ownership evaluation...",
+//       "answer": "Situation: ... Task: ... Action: ... Result: ..."
+//     }
+//   ],
+//   "skillGaps": [
+//     {
+//       "skill": "Skill Name",
+//       "severity": "high"
+//     }
+//   ],
+//   "preparationPlan": [
+//     {
+//       "day": 1,
+//       "focusArea": "Core Topic",
+//       "tasks": [
+//         "Actionable task 1",
+//         "Actionable task 2"
+//       ],
+//     }
+//   ]
+// } 
+
+// CRITICAL RULES:
+// - "title" must be a string containing the exact job role name.
+// - technicalQuestions must contain EXACTLY 10 objects.
+// - behavioralQuestions must contain EXACTLY 5 objects.
+// - skillGaps must contain EXACTLY 5 objects (severity must be strictly: "low", "medium", or "high").
+// - preparationPlan must contain EXACTLY 14 objects (Day 1 to 14).
+// `;
+
+  // Request text-based output to have full control over JSON parsing and avoid SDK schema mismatches
+const prompt = `
+You are a Principal Software Engineer and Hiring Committee Member with over 20 years of experience interviewing Software Engineers at top tech companies.
+
+Analyze the candidate profile and job description provided below, and generate a rigorous interview report. Be extremely objective and realistic: if the candidate's resume completely mismatches the job description (for example, a Data Entry resume applying for a MERN Stack / Software Development role), reflect a low, realistic match score (e.g., between 20% to 45%) to clearly highlight the profile gap.
+
+------------------------------------------------------------
+CANDIDATE PROFILE
+------------------------------------------------------------
+
+RESUME:
+${resume}
+
+SELF DESCRIPTION:
+${selfDescription || "Not provided"}
+
+JOB DESCRIPTION:
+${jobDescription}
+
+------------------------------------------------------------
+STRICT OUTPUT REQUIREMENTS (MUST BE VALID JSON)
+------------------------------------------------------------
+You must return ONLY a valid JSON object. Do NOT wrap it in markdown blockquotes (like \`\`\`json). Do NOT add any conversational text or explanations.
+
+The JSON structure must strictly follow this exact format:
+
+{
+  "matchScore": 35,
+  "title": "MERN Stack Developer",
+  "technicalQuestions": [
+    {
+      "question": "Scenario-based technical question text here...",
+      "intention": "What this question evaluates...",
+      "answer": "Detailed breakdown covering engineering concepts, trade-offs, best practices, and production approach in simple, easy, human-like language..."
     }
+  ],
+  "behavioralQuestions": [
+    {
+      "question": "Behavioral question text here...",
+      "intention": "Leadership/Ownership evaluation...",
+      "answer": "Situation: ... Task: ... Action: ... Result: ..."
+    }
+  ],
+  "skillGaps": [
+    {
+      "skill": "Simple skill name in easy English (e.g., Missing React and Node.js experience)",
+      "severity": "high"
+    }
+  ],
+  "preparationPlan": [
+    {
+      "day": 1,
+      "focusArea": "Core Topic",
+      "tasks": [
+        "Actionable task 1 with clear, step-by-step guidance",
+        "Actionable task 2"
+      ]
+    }
+  ]
+} 
 
-    // Parse and validate the response against the Zod schema
-    const parsedData = JSON.parse(rawOutput);
-    const validatedReport = interviewReportSchema.parse(parsedData);
+CRITICAL RULES:
+- "matchScore": Calculate strictly based on how well the resume matches the job description. If fields are completely different (like Data Entry vs Software Development), keep the score low (below 50%).
+- "title" must be a string containing the exact job role name from the job description.
+- technicalQuestions must contain EXACTLY 25 objects in total, structured progressively: exactly 10 easy beginner-friendly questions, exactly 10 intermediate questions, and exactly 5 hard senior-level questions.
+- behavioralQuestions must contain EXACTLY 10 objects covering teamwork, problem-solving, project ownership, and handling pressure, answered in a natural, conversational human style using the STAR method (Situation, Task, Action, Result).
+- skillGaps must contain EXACTLY 5 objects written in very simple, plain English (e.g., explaining clearly what skill is missing, like "No experience with coding frameworks like React" or "Lacks database knowledge like MongoDB") with severity strictly as: "low", "medium", or "high".
+- preparationPlan must contain EXACTLY 14 objects (Day 1 to 14) with well-defined, practical daily tasks suitable for a balanced preparation journey.
+- All technical and behavioral answers must be written in simple, easy, human-like language so that both beginner and experienced candidates can easily understand and explain them in interviews.
+`;
+  
+  const interaction = await ai.interactions.create({
+    model: "gemini-3.5-flash",
+    input: prompt,
+    response_format: {
+      type: "text",
+      mime_type: "application/json",
+    },
+  });
 
-    return validatedReport;
+  const rawText = interaction.output_text;
+  console.log("Raw AI Output Length:", rawText ? rawText.length : 0);
 
-  } catch (error) {
-    console.error("Error generating or validating interview report:", error);
-    throw new Error(`AI Service Failure: ${error.message}`);
+  let parsedData;
+  try {
+    // Clean up potential markdown wrappers if the model accidentally includes them
+    const cleanJsonText = rawText
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+
+    parsedData = JSON.parse(cleanJsonText);
+  } catch (err) {
+    console.error("Failed to parse raw text into JSON:", rawText);
+    throw new Error("Failed to parse AI response into JSON: " + err.message);
   }
+
+  // Zod Validation against Mongoose/Zod rules
+  const result = interviewReportSchema.parse(parsedData);
+
+  return result;
 }
 
-export default generateInterviewReport
+export default generateInterviewReport;
