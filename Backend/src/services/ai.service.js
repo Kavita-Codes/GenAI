@@ -45,7 +45,7 @@ const interviewReportSchema = z.object({
 
 // ---------------- Service Function ----------------
 
-async function generateInterviewReport({
+export async function generateInterviewReport({
   resume,
   selfDescription,
   jobDescription,
@@ -54,76 +54,7 @@ async function generateInterviewReport({
     throw new Error("Resume and Job Description are required.");
   }
 
-//   const prompt = `
-// You are a Principal Software Engineer and Hiring Committee Member with over 20 years of experience interviewing Software Engineers at top tech companies.
-
-// Analyze the candidate profile and job description provided below, and generate a rigorous interview report.
-
-// ------------------------------------------------------------
-// CANDIDATE PROFILE
-// ------------------------------------------------------------
-
-// RESUME:
-// ${resume}
-
-// SELF DESCRIPTION:
-// ${selfDescription || "Not provided"}
-
-// JOB DESCRIPTION:
-// ${jobDescription}
-
-// ------------------------------------------------------------
-// STRICT OUTPUT REQUIREMENTS (MUST BE VALID JSON)
-// ------------------------------------------------------------
-// You must return ONLY a valid JSON object. Do NOT wrap it in markdown blockquotes (like \`\`\`json). Do NOT add any conversational text or explanations.
-
-// The JSON structure must strictly follow this exact format:
-
-// {
-//   "matchScore": 85,
-//   "title": "MERN Stack Developer",
-//   "technicalQuestions": [
-//     {
-//       "question": "Scenario-based technical question text here...",
-//       "intention": "What this question evaluates...",
-//       "answer": "Detailed breakdown covering engineering concepts, trade-offs, best practices, and production approach..."
-//     }
-//   ],
-//   "behavioralQuestions": [
-//     {
-//       "question": "Behavioral question text here...",
-//       "intention": "Leadership/Ownership evaluation...",
-//       "answer": "Situation: ... Task: ... Action: ... Result: ..."
-//     }
-//   ],
-//   "skillGaps": [
-//     {
-//       "skill": "Skill Name",
-//       "severity": "high"
-//     }
-//   ],
-//   "preparationPlan": [
-//     {
-//       "day": 1,
-//       "focusArea": "Core Topic",
-//       "tasks": [
-//         "Actionable task 1",
-//         "Actionable task 2"
-//       ],
-//     }
-//   ]
-// } 
-
-// CRITICAL RULES:
-// - "title" must be a string containing the exact job role name.
-// - technicalQuestions must contain EXACTLY 10 objects.
-// - behavioralQuestions must contain EXACTLY 5 objects.
-// - skillGaps must contain EXACTLY 5 objects (severity must be strictly: "low", "medium", or "high").
-// - preparationPlan must contain EXACTLY 14 objects (Day 1 to 14).
-// `;
-
-  // Request text-based output to have full control over JSON parsing and avoid SDK schema mismatches
-const prompt = `
+  const prompt = `
 You are a Principal Software Engineer and Hiring Committee Member with over 20 years of experience interviewing Software Engineers at top tech companies.
 
 Analyze the candidate profile and job description provided below, and generate a rigorous interview report. Be extremely objective and realistic: if the candidate's resume completely mismatches the job description (for example, a Data Entry resume applying for a MERN Stack / Software Development role), reflect a low, realistic match score (e.g., between 20% to 45%) to clearly highlight the profile gap.
@@ -226,7 +157,7 @@ CRITICAL RULES:
 }
 
 // 1. Puppeteer Function (jaise screenshot mein hai)
-async function generatePdfFromHtml(htmlContent) {
+export async function generatePdfFromHtml(htmlContent) {
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
     
@@ -240,7 +171,7 @@ async function generatePdfFromHtml(htmlContent) {
 }
 
 // 2. Gemini HTML Generation Function
-async function generateResumePdf({ resume, selfDescription, jobDescription }) {
+export async function generateResumePdf({ resume, selfDescription, jobDescription }) {
     const resumePdfSchema = z.object({
         html: z.string()
     });
@@ -306,5 +237,3 @@ const interaction = await ai.interactions.create({
   
   return pdfBuffer;
 }
-
-export default {generateInterviewReport, generateResumePdf , generatePdfFromHtml}

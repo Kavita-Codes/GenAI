@@ -1,4 +1,4 @@
-import generateInterviewReport from "../services/ai.service.js";
+import {generateInterviewReport, generateResumePdf} from "../services/ai.service.js";
 import InterviewReport from "../models/interviewReport.model.js";
 import { extractTextFromPDF } from "../../utils/extractPDF.js";
 import cleanResumeText from "../../utils/cleanResumeText.js";
@@ -119,9 +119,10 @@ export async function generateResumePdfController(req, res) {
             selfDescription 
         });
 
-        // Set response headers for PDF download/viewing
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'attachment; filename=interview-report.pdf');
+        res.set({
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename=resume_${interviewReportId}.pdf`
+        })
         
         return res.status(200).send(pdfBuffer);
 

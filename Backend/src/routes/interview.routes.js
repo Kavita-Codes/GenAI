@@ -8,7 +8,7 @@ const IRouter = express.Router()
 IRouter.post("/",authUser , upload.single("resume") , interviewController)
 IRouter.get("/report/:interviewId" , authUser , getInterviewReportController)
 IRouter.get("/" , authUser , getAllInterviewReportsController)
-IRouter.get('/interview-report/:interviewReportId/pdf', authUser, generateResumePdfController);
+IRouter.post('/interview-report/:interviewReportId/pdf', authUser, generateResumePdfController);
 
 
 
